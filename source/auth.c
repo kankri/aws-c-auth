@@ -90,7 +90,6 @@ void aws_auth_library_init(struct aws_allocator *allocator) {
     if (s_library_initialized) {
         return;
     }
-    s_library_initialized = true;
 
     aws_http_library_init(allocator);
 
@@ -108,6 +107,8 @@ void aws_auth_library_init(struct aws_allocator *allocator) {
     struct cJSON_Hooks allocation_hooks = {.malloc_fn = s_cJSONAlloc, .free_fn = s_cJSONFree};
 
     cJSON_InitHooks(&allocation_hooks);
+
+    s_library_initialized = true;
 }
 
 void aws_auth_library_clean_up(void) {
@@ -118,6 +119,12 @@ void aws_auth_library_clean_up(void) {
     s_library_initialized = false;
 
     aws_signing_clean_up_signing_tables();
+
+    aws_unregister_log_subject_info_list(&s_auth_log_subject_list);
+
+    aws_unregister_error_info(&s_error_list);
+
+    s_library_allocator = NULL;
 
     aws_http_library_clean_up();
 }

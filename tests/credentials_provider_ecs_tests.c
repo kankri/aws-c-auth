@@ -487,7 +487,7 @@ static int s_credentials_provider_ecs_basic_success(struct aws_allocator *alloca
     struct aws_date_time expiration;
     struct aws_byte_cursor date_cursor = aws_byte_cursor_from_string(s_good_response_expiration);
     aws_date_time_init_from_str_cursor(&expiration, &date_cursor, AWS_DATE_FORMAT_ISO_8601);
-    ASSERT_TRUE(s_tester.credentials->expiration_timepoint_seconds == expiration.timestamp);
+    ASSERT_TRUE(s_tester.credentials->expiration_timepoint_seconds == (uint64_t)expiration.timestamp);
 
     aws_credentials_provider_release(provider);
 
@@ -565,7 +565,7 @@ static int s_credentials_provider_ecs_success_multi_part_doc(struct aws_allocato
     struct aws_date_time expiration;
     struct aws_byte_cursor date_cursor = aws_byte_cursor_from_string(s_good_response_expiration);
     aws_date_time_init_from_str_cursor(&expiration, &date_cursor, AWS_DATE_FORMAT_ISO_8601);
-    ASSERT_TRUE(s_tester.credentials->expiration_timepoint_seconds == expiration.timestamp);
+    ASSERT_TRUE(s_tester.credentials->expiration_timepoint_seconds == (uint64_t)expiration.timestamp);
 
     aws_credentials_provider_release(provider);
 

@@ -18,6 +18,7 @@
 #include <aws/auth/external/cJSON.h>
 #include <aws/auth/private/credentials_utils.h>
 #include <aws/common/clock.h>
+#include <aws/common/date_time.h>
 #include <aws/common/string.h>
 #include <aws/http/connection.h>
 #include <aws/http/connection_manager.h>
@@ -140,7 +141,7 @@ AWS_STATIC_STRING_FROM_LITERAL(s_empty_empty_string, "\0");
 AWS_STATIC_STRING_FROM_LITERAL(s_access_key_id_name, "AccessKeyId");
 AWS_STATIC_STRING_FROM_LITERAL(s_secret_access_key_name, "SecretAccessKey");
 AWS_STATIC_STRING_FROM_LITERAL(s_session_token_name, "Token");
-
+AWS_STATIC_STRING_FROM_LITERAL(s_creds_expiration_name, "Expiration");
 /*
  * In general, the ECS document looks something like:
 
@@ -191,12 +192,19 @@ static struct aws_credentials *s_parse_credentials_from_ecs_document(
         goto done;
     }
 
+    cJSON *creds_expiration =
+        cJSON_GetObjectItemCaseSensitive(document_root, aws_string_c_str(s_creds_expiration_name));
+    if (!cJSON_IsString(creds_expiration) || (creds_expiration->valuestring == NULL)) {
+        goto done;
+    }
+
     /*
      * Build the credentials
      */
     struct aws_byte_cursor access_key_id_cursor = aws_byte_cursor_from_c_str(access_key_id->valuestring);
     struct aws_byte_cursor secret_access_key_cursor = aws_byte_cursor_from_c_str(secret_access_key->valuestring);
     struct aws_byte_cursor session_token_cursor = aws_byte_cursor_from_c_str(session_token->valuestring);
+    struct aws_byte_cursor creds_expiration_cursor = aws_byte_cursor_from_c_str(creds_expiration->valuestring);
 
     if (access_key_id_cursor.len == 0 || secret_access_key_cursor.len == 0 || session_token_cursor.len == 0) {
         goto done;
@@ -205,6 +213,11 @@ static struct aws_credentials *s_parse_credentials_from_ecs_document(
     credentials = aws_credentials_new_from_cursors(
         allocator, &access_key_id_cursor, &secret_access_key_cursor, &session_token_cursor);
 
+    if (creds_expiration_cursor.len != 0) {
+        struct aws_date_time expiration;
+        aws_date_time_init_from_str_cursor(&expiration, &creds_expiration_cursor, AWS_DATE_FORMAT_ISO_8601);
+        credentials->expiration_timepoint_seconds = expiration.timestamp;
+    }
 done:
 
     if (document_root != NULL) {
